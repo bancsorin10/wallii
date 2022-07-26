@@ -1,31 +1,22 @@
 #include "wallii.h"
 
-static void decode_jpeg(int fd, t_image *img) {
-}
-
-static void decode_png(int fd, t_image *img) {
-}
-
 // function to read the image and choose between png|jpeg decoding strategies
 // return: decoded image in RGB format
-t_image *decode_image(char *filename) {
+// expect: files in `.rgb` aka raw format of a certain size
+t_image *decode_image(char *filename)
+{
     t_image *img;
     int fd;
-    int i;
+    unsigned int i = 0;
 
     img = (t_image *)malloc(sizeof(t_image));
     fd = open(filename, O_RDONLY);
 
-    while (filename[i]) {
-        i++;
-        if (filename[i-1] != '.')
-            continue;
-        if (filename[i] == 'j')
-            decode_jpeg(fd, img);
-        else
-            decode_png(fd, img);
-        break;
-    }
+    // dummy initialization
+    img->RGB = (unsigned char *)malloc(sizeof(unsigned char)*11);
+    img->RGB = memset(img->RGB, 'a', 10);
+    img->RGB[10] = '\0';
+    img->size = 10;
 
     close(fd);
 
