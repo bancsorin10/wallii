@@ -30,19 +30,22 @@ static double output_sum(
 // compute a new layer
 // should probably return a structure of the used weights and the results of
 // `output_sum` for each input with each weight
-static void add_layer(
+static double *add_layer(
         double *input,
         t_layer *layer)
 {
     unsigned int i;
-    if (!layer->output)
-        layer->output = (double *)malloc(sizeof(double)*layer->nr_weights);
+    double *output;
+
+    output = (double *)malloc(sizeof(double)*layer->nr_weights);
 
     for (i = 0; i < layer->nr_weights; ++i)
     {
         // compute the output
-        layer->output[i] = output_sum(input, layer->weights[i], layer->input_size, layer->biases[i]);
+        output[i] = output_sum(input, layer->weights[i], layer->input_size, layer->biases[i]);
     }
+
+    return output;
 }
 
 static void free_layer(t_layer *layer) {
@@ -54,7 +57,6 @@ static void free_layer(t_layer *layer) {
     }
     free(layer->weights);
     free(layer->biases);
-    free(layer->output);
     free(layer);
 }
 
@@ -104,7 +106,7 @@ static void softmax_activate(double *output, unsigned int size)
     }
 }
 
-static double loss(double *output, char *filename)
+static double loss_function(double *output, char *filename)
 {
     double loss;
     unsigned int i;
@@ -115,12 +117,12 @@ static double loss(double *output, char *filename)
     i = 0;
     while (filename[i])
     {
-        if (filename[i] == '-')
+        if (filename[i] == '_')
         {
             if (filename[i+1] == 'g')
-                class = 1;
-            else
                 class = 0;
+            else
+                class = 1;
             break;
         }
         ++i;
@@ -145,80 +147,85 @@ static void forward(
         t_layer *layer2,
         double *loss)
 {
-    t_layer *layer1_copy;
-    t_layer *layer2_copy;
+    t_image *img;
+    double *in;
+    unsigned int i;
+    double *output1;
+    double *output2;
+
+    img = decode_image(filename);
+    in = (double *)malloc(sizeof(double)*IMG_SIZE);
+    for (i = 0; i < IMG_SIZE; ++i)
+        in[i] = (double)img->RGB[i];
+
+    output1 = add_layer(in, layer1);
+    relu_activate(output1, layer1->nr_weights);
+    output2 = add_layer(output1, layer2);
+    softmax_activate(output2, layer2->nr_weights);
+
+    loss[thread_id] = loss_function(output2, filename);
+    printf("output1: %10.5f | output2: %10.5f\n", output2[0], output2[1]);
+    free(img->RGB);
+    free(img);
+    free(in);
 }
 
 int main()
 {
     unsigned int i;
     unsigned int j;
-    unsigned int nr_weights = 100;
-    unsigned int nr_classes = 2; // good or bad
-    t_image *img;
     t_layer *layer1;
     t_layer *layer2;
-
-    img = decode_image("images/011km1.jpg");
 
     layer1 = (t_layer *)malloc(sizeof(t_layer));
     layer2 = (t_layer *)malloc(sizeof(t_layer));
 
-    layer1->biases = (double *)malloc(sizeof(double)*nr_weights);
-    layer2->biases = (double *)malloc(sizeof(double)*nr_weights);
-    layer1->input_size = img->size;
-    layer1->nr_weights = nr_weights;
+    layer1->biases = (double *)malloc(sizeof(double)*NR_WEIGHTS);
+    layer2->biases = (double *)malloc(sizeof(double)*NR_WEIGHTS);
+    layer1->input_size = IMG_SIZE;
+    layer1->nr_weights = NR_WEIGHTS;
     layer2->input_size = layer1->nr_weights;
-    layer2->nr_weights = nr_classes;
+    layer2->nr_weights = NR_CLASSES;
 
-    layer1->weights = (double **)malloc(sizeof(double *)*nr_weights);
+    layer1->weights = (double **)malloc(sizeof(double *)*NR_WEIGHTS);
     srand(42); // set the seed
-    for (i = 0; i < nr_weights; ++i) {
+    for (i = 0; i < NR_WEIGHTS; ++i) {
         // allocate memory and randomize the weights
-        layer1->weights[i] = (double *)malloc(sizeof(double)*img->size);
+        layer1->weights[i] = (double *)malloc(sizeof(double)*IMG_SIZE);
         for (j = 0; j < layer1->input_size; ++j) {
             layer1->weights[i][j] = random_normal() * 0.01; // small weights
         }
     }
 
-    // first layer inputs the actual image and generated weights for each
-    // pixel
-    double *iin = (double *) malloc (sizeof(double)*img->size);
-    for (i = 0; i < img->size; ++i) {
-        iin[i] = (double)img->RGB[i];
-    }
-    add_layer(iin, layer1);
-    relu_activate(layer1->output, nr_weights);
 
-    layer2->weights = (double **)malloc(sizeof(double *)*nr_classes);
-    for (i = 0; i < nr_classes; ++i) {
-        layer2->weights[i] = (double *)malloc(sizeof(double)*nr_weights);
+    layer2->weights = (double **)malloc(sizeof(double *)*NR_CLASSES);
+    for (i = 0; i < NR_CLASSES; ++i) {
+        layer2->weights[i] = (double *)malloc(sizeof(double)*layer2->input_size);
         for (j = 0; j < layer2->input_size; ++j) {
             layer2->weights[i][j] = random_normal() * 0.01; // small weights
         }
     }
 
-    add_layer(layer1->output, layer2);
-    softmax_activate(layer2->output, layer2->nr_weights);
+    double *loss;
+    double avg_loss;
+    loss = (double *)malloc(sizeof(double)*BATCH_SIZE);
 
-    /* printf("weights1:\n"); */
-    /* for (i = 0; i < 10; ++i) { */
-        /* printf("%.10f ", layer1->weights[0][i]); */
-    /* } */
-    /* printf("\n"); */
-    /* printf("output1:\n"); */
-    /* for (i = 0; i < 5; ++i) { */
-        /* printf("%.10f ", layer1->output[i]); */
-    /* } */
-    /* printf("\n"); */
+    // for epochs
+    // for 0-BATCH_SIZE start threads
+    // average loss over the threads when collecting
+    // update the weights
+    forward(0, "inputs/zxzgpw_bad.rgb", layer1, layer2, loss);
+    printf("%.5f\n", loss[0]);
 
-    printf("%.5f -- %.5f\n", layer2->output[0], layer2->output[1]);
+    // average loss over the threads
+    avg_loss = 0;
+    for (i = 0; i < BATCH_SIZE; ++i)
+        avg_loss += loss[i];
+    avg_loss /= BATCH_SIZE;
 
     // free memory
     free_layer(layer1);
     free_layer(layer2);
-    free(img->RGB);
-    free(img);
 
     return 0;
 }

@@ -7,16 +7,14 @@ t_image *decode_image(char *filename)
 {
     t_image *img;
     int fd;
-    unsigned int i = 0;
 
     img = (t_image *)malloc(sizeof(t_image));
     fd = open(filename, O_RDONLY);
 
     // dummy initialization
-    img->RGB = (unsigned char *)malloc(sizeof(unsigned char)*11);
-    img->RGB = memset(img->RGB, 'a', 10);
-    img->RGB[10] = '\0';
-    img->size = 10;
+    img->RGB = (unsigned char *)malloc(sizeof(unsigned char)*(IMG_SIZE + 1));
+    read(fd, img->RGB, IMG_SIZE);
+    img->RGB[IMG_SIZE] = '\0'; // extra
 
     close(fd);
 

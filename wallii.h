@@ -12,7 +12,10 @@
 # define M_PI 3.14159265358979323846
 # endif
 
-# define IMAGE_SIZE 3888
+# define IMG_SIZE 3888
+# define NR_WEIGHTS 5
+# define NR_CLASSES 2
+# define BATCH_SIZE 1
 
 // expect the image to be saved as arrays for length `size` corresponding to
 // the RGB values of the image
@@ -21,14 +24,12 @@
 typedef struct s_image
 {
     unsigned char *RGB;
-    unsigned int size;
 }               t_image;
 
 typedef struct s_layer
 {
     double **weights;
     double *biases;
-    double *output;
     unsigned int nr_weights;
     unsigned int input_size;
 }               t_layer;
