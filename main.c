@@ -37,6 +37,7 @@ static double *add_layer(
     {
         // compute the output
         output[i] = output_sum(input, layer->weights[i], layer->input_size, layer->biases[i]);
+        /* printf("output[%d]: %f -- ", i, output[i]); */
     }
 
     return output;
@@ -142,13 +143,20 @@ static void *sample(void *sample_input)
     sample_in = (t_sample_input *)sample_input;
 
     /* pthread_detach(pthread_self()); */
+    /* printf("%.5f\n", sample_in->layer1->weights[0][0]); */
 
     img = decode_image(sample_in->filename);
     in = (double *)malloc(sizeof(double)*IMG_SIZE);
     for (i = 0; i < IMG_SIZE; ++i)
         in[i] = (double)img->RGB[i];
 
+    /* printf("%.5f\n", in[100]); */
+
     // forward propagation
+    /* printf("%f\n", sample_in->layer1->weights[0][4]); */
+    /* printf("%f\n", in[4]); */
+    /* printf("%f\n", sample_in->layer1->biases[3]); */
+    /* printf("%f\n", sample_in->layer1->biases[4]); */
     output1 = add_layer(in, sample_in->layer1);
     relu_activate(output1, sample_in->layer1->nr_weights);
     output2 = add_layer(output1, sample_in->layer2);
@@ -208,7 +216,9 @@ static t_sample_input *construct_initial()
     layer2 = (t_layer *)malloc(sizeof(t_layer));
 
     layer1->biases = (double *)malloc(sizeof(double)*NR_WEIGHTS);
-    layer2->biases = (double *)malloc(sizeof(double)*NR_WEIGHTS);
+    layer2->biases = (double *)malloc(sizeof(double)*NR_CLASSES);
+    bzero(layer1->biases, sizeof(double)*NR_WEIGHTS);
+    bzero(layer2->biases, sizeof(double)*NR_CLASSES);
     layer1->input_size = IMG_SIZE;
     layer1->nr_weights = NR_WEIGHTS;
     layer2->input_size = layer1->nr_weights;
@@ -281,8 +291,7 @@ static void train(
     ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
     /* sample_in->filename = input_files->files[0]; */
     sample_in->filename = "inputs/zxzgpw_bad.rgb";
-    printf("%s\n", input_files->files[0]);
-    sample_in->cor = cor[0];
+    /* printf("%s\n", input_files->files[0]); */
     // for epochs
     // for 0-BATCH_SIZE start threads
     // average loss over the threads when collecting
@@ -295,7 +304,6 @@ static void train(
             sample_in->thread_id = i;
             sample_in->cor = cor[i];
             pthread_create(&ptid[i], NULL, &sample, sample_in);
-            sample(sample_in);
         }
         for (i = 0; i < BATCH_SIZE; ++i)
         {
