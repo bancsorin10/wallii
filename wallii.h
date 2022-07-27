@@ -8,6 +8,8 @@
 # include <fcntl.h>
 # include <math.h>
 # include <pthread.h>
+# include <sys/types.h>
+# include <dirent.h>
 
 # ifndef M_PI
 # define M_PI 3.14159265358979323846
@@ -53,6 +55,11 @@ typedef struct s_sample_input {
     t_layer *layer2;
     t_correction *cor;
 }           t_sample_input;
+
+typedef struct s_inputs {
+    char **files;
+    unsigned int nr_files;
+}           t_inputs;
 
 t_image *decode_image(char *filename);
 double random_normal();

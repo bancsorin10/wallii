@@ -18,12 +18,6 @@ static double output_sum(
         out += input[i]*weight[i];
     }
 
-    /* printf("suma:\n"); */
-    /* for (i = 0; i < size; ++i) { */
-            /* printf("input: %-15.5f | weight: %-15.5f | mul: %-15.5f\n", input[i], weight[i], input[i]*weight[i]); */
-    /* } */
-    /* printf("out: %.5f\n", out); */
-
     return out;
 }
 
@@ -64,12 +58,6 @@ static void free_layer(t_layer *layer) {
 static void relu_activate(double *output, unsigned int size)
 {
     unsigned int i;
-
-    /* printf("output1 before relu:\n"); */
-    /* for (i = 0; i < 5; ++i) { */
-        /* printf("%.10f ", output[i]); */
-    /* } */
-    /* printf("\n"); */
 
     for (i = 0; i < size; ++i)
     {
@@ -209,7 +197,7 @@ static void *sample(void *sample_input)
     /* pthread_exit(NULL); */
 }
 
-int main()
+static t_sample_input *construct_initial()
 {
     unsigned int i;
     unsigned int j;
@@ -244,7 +232,18 @@ int main()
             layer2->weights[i][j] = random_normal() * 0.01; // small weights
         }
     }
+    t_sample_input *sample_in;
+    sample_in = (t_sample_input *)malloc(sizeof(t_sample_input));
+    sample_in->layer1 = layer1;
+    sample_in->layer2 = layer2;
 
+    return sample_in;
+}
+
+static t_correction **construct_correction(t_sample_input *sample)
+{
+    unsigned int i;
+    unsigned int j;
     t_correction **cor;
 
     cor = (t_correction **)malloc(sizeof(t_correction *)*BATCH_SIZE);
@@ -257,26 +256,32 @@ int main()
         cor[i]->dweights2 = (double **)malloc(sizeof(double *)*NR_CLASSES);
         for (j = 0; j < NR_WEIGHTS; ++j)
         {
-            cor[i]->dweights1[j] = (double *)malloc(sizeof(double)*layer1->input_size);
+            cor[i]->dweights1[j] = (double *)malloc(sizeof(double)*sample->layer1->input_size);
         }
         for (j = 0; j < NR_CLASSES; ++j)
         {
-            cor[i]->dweights2[j] = (double *)malloc(sizeof(double)*layer2->input_size);
+            cor[i]->dweights2[j] = (double *)malloc(sizeof(double)*sample->layer2->input_size);
         }
     }
+    return cor;
+}
 
+static void train(
+        t_sample_input *sample_in,
+        t_correction **cor,
+        t_inputs *input_files)
+{
+    unsigned int i;
+    unsigned int j;
     unsigned int k;
     double avg_loss;
     double avg_acc;
-    t_sample_input *sample_in;
     pthread_t *ptid;
 
     ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
-
-    sample_in = (t_sample_input *)malloc(sizeof(t_sample_input));
+    /* sample_in->filename = input_files->files[0]; */
     sample_in->filename = "inputs/zxzgpw_bad.rgb";
-    sample_in->layer1 = layer1;
-    sample_in->layer2 = layer2;
+    printf("%s\n", input_files->files[0]);
     sample_in->cor = cor[0];
     // for epochs
     // for 0-BATCH_SIZE start threads
@@ -309,27 +314,73 @@ int main()
         printf("%d || loss: %5.5f || acc: %5.5f\n", k, avg_loss, avg_acc);
 
         // update weights
-        for (i = 0; i < layer1->nr_weights; ++i)
+        for (i = 0; i < sample_in->layer1->nr_weights; ++i)
         {
-            for (j = 0; j < layer1->input_size; ++j)
+            for (j = 0; j < sample_in->layer1->input_size; ++j)
             {
-                layer1->weights[i][j] -= 0.0001*cor[0]->dweights1[i][j];
+                sample_in->layer1->weights[i][j] -= 0.0001*cor[0]->dweights1[i][j];
             }
-            layer1->biases[i] -= 0.0001*cor[0]->dbiases1[i];
+            sample_in->layer1->biases[i] -= 0.0001*cor[0]->dbiases1[i];
         }
-        for (i = 0; i < layer2->nr_weights; ++i)
+        for (i = 0; i < sample_in->layer2->nr_weights; ++i)
         {
-            for (j = 0; j < layer2->input_size; ++j)
+            for (j = 0; j < sample_in->layer2->input_size; ++j)
             {
-                layer1->weights[i][j] -= 0.0001*cor[0]->dweights2[i][j];
+                sample_in->layer1->weights[i][j] -= 0.0001*cor[0]->dweights2[i][j];
             }
-            layer2->biases[i] -= 0.0001*cor[0]->dbiases2[i];
+            sample_in->layer2->biases[i] -= 0.0001*cor[0]->dbiases2[i];
         }
     }
+    free(ptid);
+}
+
+static t_inputs *construct_inputs()
+{
+    t_inputs *input_files;
+    struct dirent **namelist;
+    unsigned int i;
+    int n;
+    char prefix[256] = "inputs/";
+
+    input_files = (t_inputs *)malloc(sizeof(t_inputs));
+    n = scandir("inputs/", &namelist, NULL, alphasort);
+    if (n < 1)
+        exit(-2);
+
+    n = (unsigned int)n;
+    // ignore the `.` and `..` files
+    input_files->files = (char **)malloc(sizeof(char *)*(n-2));
+    i = 2;
+    while (i < n)
+    {
+        input_files->files[i-2] = strdup(strcat(prefix, namelist[i]->d_name));
+        ++i;
+    }
+
+    while (n--) {
+        free(namelist[n]);
+    }
+    free(namelist);
+
+    return input_files;
+}
+
+int main()
+{
+    unsigned int i;
+    unsigned int j;
+    t_correction **cor;
+    t_sample_input *sample_in;
+    t_inputs *input_files;
+
+    input_files = construct_inputs();
+    sample_in = construct_initial();
+    cor = construct_correction(sample_in);
+    train(sample_in, cor, input_files);
 
     // free memory
-    free_layer(layer1);
-    free_layer(layer2);
+    free_layer(sample_in->layer1);
+    free_layer(sample_in->layer2);
     for (i = 0; i < BATCH_SIZE; ++i)
     {
         for (j = 0; j < NR_WEIGHTS; ++j)
@@ -344,7 +395,14 @@ int main()
         free(cor[i]->dbiases2);
         free(cor[i]);
     }
+    for (i = 0; i < input_files->nr_files; ++i)
+    {
+        free(input_files->files[i]);
+    }
+    free(input_files->files);
+    free(input_files);
     free(cor);
+    free(sample_in);
 
     return 0;
 }

@@ -1,5 +1,8 @@
 
 #include <stdio.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdlib.h>
 
 #define TEST 0xffd8
 
@@ -15,5 +18,18 @@ int main() {
 
     printf("-------------------------\n");
     printf("%.10f\n", 1e-7);
+
+    printf("-------------------------\n");
+
+    struct dirent **namelist;
+    int n;
+    n = scandir("inputs/", &namelist, NULL, alphasort);
+
+           while (n--) {
+               printf("%s\n", namelist[n]->d_name);
+               free(namelist[n]);
+           }
+           free(namelist);
+
     return 0;
 }
