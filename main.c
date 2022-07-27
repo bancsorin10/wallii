@@ -106,7 +106,7 @@ static void softmax_activate(double *output, unsigned int size)
     }
 }
 
-static double loss_function(double *output, char *filename)
+static void loss_function(double *output, char *filename, t_correction *cor)
 {
     double loss;
     unsigned int i;
@@ -137,37 +137,76 @@ static double loss_function(double *output, char *filename)
 
     loss = -log(out_clip);
 
-    return loss;
+    cor->loss  = loss;
+    cor->acc   = output[class] > 0.5;
+    cor->class = class;
 }
 
-static void forward(
-        unsigned int thread_id,
-        char *filename,
-        t_layer *layer1,
-        t_layer *layer2,
-        double *loss)
+static void *sample(void *sample_input)
 {
     t_image *img;
     double *in;
     unsigned int i;
+    unsigned int j;
     double *output1;
     double *output2;
+    t_sample_input *sample_in;
+    sample_in = (t_sample_input *)sample_input;
 
-    img = decode_image(filename);
+    /* pthread_detach(pthread_self()); */
+
+    img = decode_image(sample_in->filename);
     in = (double *)malloc(sizeof(double)*IMG_SIZE);
     for (i = 0; i < IMG_SIZE; ++i)
         in[i] = (double)img->RGB[i];
 
-    output1 = add_layer(in, layer1);
-    relu_activate(output1, layer1->nr_weights);
-    output2 = add_layer(output1, layer2);
-    softmax_activate(output2, layer2->nr_weights);
+    // forward propagation
+    output1 = add_layer(in, sample_in->layer1);
+    relu_activate(output1, sample_in->layer1->nr_weights);
+    output2 = add_layer(output1, sample_in->layer2);
+    softmax_activate(output2, sample_in->layer2->nr_weights);
 
-    loss[thread_id] = loss_function(output2, filename);
-    printf("output1: %10.5f | output2: %10.5f\n", output2[0], output2[1]);
+    loss_function(output2, sample_in->filename, sample_in->cor);
+    /* printf("output1: %10.5f | output2: %10.5f\n", output2[0], output2[1]); */
+
+    // backward propagation
+    output2[sample_in->cor->class] -= 1;
+    for (i = 0; i < sample_in->layer2->nr_weights; ++i)
+    {
+        for (j = 0; j < sample_in->layer2->input_size; ++j)
+        {
+            sample_in->cor->dweights2[i][j] = output1[j]*output2[i];
+        }
+        sample_in->cor->dbiases2[i] = output2[i];
+    }
+    for (j = 0; j < sample_in->layer1->nr_weights; ++j)
+    {
+        sample_in->cor->dbiases1[j] = 0;
+        for (i = 0; i < sample_in->layer2->nr_weights; ++i)
+        {
+            if (output1[j] == 0)
+                sample_in->cor->dbiases1[j] = 0;
+            else
+                sample_in->cor->dbiases1[j] += output2[i]*sample_in->layer2->weights[i][j];
+        }
+    }
+    for (i = 0; i < sample_in->layer1->nr_weights; ++i)
+    {
+        for (j = 0; j < sample_in->layer1->input_size; ++j)
+        {
+            sample_in->cor->dweights1[i][j] = sample_in->cor->dbiases1[i]*in[j];
+        }
+    }
+    
+
     free(img->RGB);
     free(img);
     free(in);
+    free(output1);
+    free(output2);
+
+    return NULL;
+    /* pthread_exit(NULL); */
 }
 
 int main()
@@ -206,26 +245,106 @@ int main()
         }
     }
 
-    double *loss;
-    double avg_loss;
-    loss = (double *)malloc(sizeof(double)*BATCH_SIZE);
+    t_correction **cor;
 
+    cor = (t_correction **)malloc(sizeof(t_correction *)*BATCH_SIZE);
+    for (i = 0; i < BATCH_SIZE; ++i)
+    {
+        cor[i] = (t_correction *)malloc(sizeof(t_correction));
+        cor[i]->dbiases1 = (double *)malloc(sizeof(double)*NR_WEIGHTS);
+        cor[i]->dbiases2 = (double *)malloc(sizeof(double)*NR_CLASSES);
+        cor[i]->dweights1 = (double **)malloc(sizeof(double *)*NR_WEIGHTS);
+        cor[i]->dweights2 = (double **)malloc(sizeof(double *)*NR_CLASSES);
+        for (j = 0; j < NR_WEIGHTS; ++j)
+        {
+            cor[i]->dweights1[j] = (double *)malloc(sizeof(double)*layer1->input_size);
+        }
+        for (j = 0; j < NR_CLASSES; ++j)
+        {
+            cor[i]->dweights2[j] = (double *)malloc(sizeof(double)*layer2->input_size);
+        }
+    }
+
+    unsigned int k;
+    double avg_loss;
+    double avg_acc;
+    t_sample_input *sample_in;
+    pthread_t *ptid;
+
+    ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
+
+    sample_in = (t_sample_input *)malloc(sizeof(t_sample_input));
+    sample_in->filename = "inputs/zxzgpw_bad.rgb";
+    sample_in->layer1 = layer1;
+    sample_in->layer2 = layer2;
+    sample_in->cor = cor[0];
     // for epochs
     // for 0-BATCH_SIZE start threads
     // average loss over the threads when collecting
     // update the weights
-    forward(0, "inputs/zxzgpw_bad.rgb", layer1, layer2, loss);
-    printf("%.5f\n", loss[0]);
+    for (k = 0; k < 5; ++k)
+    {
+        for (i = 0; i < BATCH_SIZE; ++i)
+        {
+            // sample_in->filename = ...
+            sample_in->thread_id = i;
+            sample_in->cor = cor[i];
+            pthread_create(&ptid[i], NULL, &sample, sample_in);
+            sample(sample_in);
+        }
+        for (i = 0; i < BATCH_SIZE; ++i)
+        {
+            pthread_join(ptid[i], NULL);
+        }
 
-    // average loss over the threads
-    avg_loss = 0;
-    for (i = 0; i < BATCH_SIZE; ++i)
-        avg_loss += loss[i];
-    avg_loss /= BATCH_SIZE;
+        // average loss over the threads
+        avg_loss = 0;
+        avg_acc  = 0;
+        for (i = 0; i < BATCH_SIZE; ++i)
+        {
+            avg_loss += cor[i]->loss;
+            avg_acc  += cor[i]->acc;
+        }
+        avg_loss /= BATCH_SIZE;
+        printf("%d || loss: %5.5f || acc: %5.5f\n", k, avg_loss, avg_acc);
+
+        // update weights
+        for (i = 0; i < layer1->nr_weights; ++i)
+        {
+            for (j = 0; j < layer1->input_size; ++j)
+            {
+                layer1->weights[i][j] -= 0.0001*cor[0]->dweights1[i][j];
+            }
+            layer1->biases[i] -= 0.0001*cor[0]->dbiases1[i];
+        }
+        for (i = 0; i < layer2->nr_weights; ++i)
+        {
+            for (j = 0; j < layer2->input_size; ++j)
+            {
+                layer1->weights[i][j] -= 0.0001*cor[0]->dweights2[i][j];
+            }
+            layer2->biases[i] -= 0.0001*cor[0]->dbiases2[i];
+        }
+    }
 
     // free memory
     free_layer(layer1);
     free_layer(layer2);
+    for (i = 0; i < BATCH_SIZE; ++i)
+    {
+        for (j = 0; j < NR_WEIGHTS; ++j)
+        {
+            free(cor[i]->dweights1[j]);
+        }
+        for (j = 0; j < NR_CLASSES; ++j)
+        {
+            free(cor[i]->dweights2[j]);
+        }
+        free(cor[i]->dbiases1);
+        free(cor[i]->dbiases2);
+        free(cor[i]);
+    }
+    free(cor);
 
     return 0;
 }

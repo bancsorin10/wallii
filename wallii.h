@@ -7,13 +7,14 @@
 # include <string.h>
 # include <fcntl.h>
 # include <math.h>
+# include <pthread.h>
 
 # ifndef M_PI
 # define M_PI 3.14159265358979323846
 # endif
 
 # define IMG_SIZE 3888
-# define NR_WEIGHTS 5
+# define NR_WEIGHTS 100
 # define NR_CLASSES 2
 # define BATCH_SIZE 1
 
@@ -33,6 +34,25 @@ typedef struct s_layer
     unsigned int nr_weights;
     unsigned int input_size;
 }               t_layer;
+
+typedef struct s_correction
+{
+    double **dweights1;
+    double **dweights2;
+    double *dbiases1;
+    double *dbiases2;
+    double loss;
+    double acc;
+    unsigned char class; // 0 or 1
+}           t_correction;
+
+typedef struct s_sample_input {
+    unsigned int thread_id;
+    char *filename;
+    t_layer *layer1;
+    t_layer *layer2;
+    t_correction *cor;
+}           t_sample_input;
 
 t_image *decode_image(char *filename);
 double random_normal();

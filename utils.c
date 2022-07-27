@@ -9,5 +9,6 @@ static double drand()
 /* normal distribution, centered on 0, std dev 1 */
 double random_normal()
 {
-    return sqrt(-2*log(drand())) * cos(2*M_PI*drand());
+    return drand()-0.5;
+    /* return sqrt(-2*log(drand())) * cos(2*M_PI*drand()); */
 }
