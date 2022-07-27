@@ -18,13 +18,13 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                os.rename(image[i], f"{image[i]}_bad")
+                os.rename(images[i], f"{images[i]}_bad")
                 i += 1
                 disp_image = pygame.image.load(images[i])
                 disp_image = pygame.transform.scale(disp_image, (1980, 1080))
                 print("bad")
             elif event.key == pygame.K_RIGHT:
-                os.rename(image[i], f"{image[i]}_god")
+                os.rename(images[i], f"{images[i]}_god")
                 i += 1
                 disp_image = pygame.image.load(images[i])
                 disp_image = pygame.transform.scale(disp_image, (1980, 1080))

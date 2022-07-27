@@ -16,9 +16,11 @@
 # endif
 
 # define IMG_SIZE 3888
-# define NR_WEIGHTS 100
+# define NR_WEIGHTS 50
 # define NR_CLASSES 2
 # define BATCH_SIZE 1
+# define NR_EPOCHS 100
+# define CORR_COEFF 0.0001
 
 // expect the image to be saved as arrays for length `size` corresponding to
 // the RGB values of the image
@@ -63,5 +65,11 @@ typedef struct s_inputs {
 
 t_image *decode_image(char *filename);
 double random_normal();
+void loss_function(double *output, char *filename, t_correction *cor);
+void softmax_activate(double *output, unsigned int size);
+void relu_activate(double *output, unsigned int size);
+t_inputs *construct_inputs();
+t_correction **construct_correction(t_sample_input *sample);
+t_sample_input *construct_initial();
 
 #endif
