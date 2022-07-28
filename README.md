@@ -87,6 +87,19 @@ You can check the model after you trained against other pics like
 ./model <new_image_never_seen>
 ```
 
+## results
+
+![results](results.png)
+
+The accuracy seems good but the loss is still high, basically the model just
+flips a coin to decide -> the model might be overfitted on the training data or
+the weights are not well optimized. Should probably take in account that the
+good wallpapers are usually less common and it should have a higher importance
+to guess one. (Worried that with this approach - just using the loss with a
+constant multiplication to adjust the weights - can lead to only guessing
+wrong images but this can still have a high accuracy due to the low number of
+good images)
+
 ## current status
 
 + no optimization for how the weights are modified
