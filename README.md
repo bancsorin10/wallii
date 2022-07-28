@@ -13,7 +13,7 @@ The input data is supposed to be raw images (.rgb format).
 The input data is not here since it takes a lot of space but you can construct
 your own set of data.
 
-You can use a script like:
+You can use a script like the one bellow to collect images:
 ```
 #!/bin/bash
 
@@ -49,11 +49,15 @@ do
 done
 ```
 
-Save it and run it with an argument such as
-`https://wallhaven.cc/search?categories=111&purity=110&resolutions=1920x1080&sorting=random&order=desc&colors=000000`.
-(For a bigger variety of pictures you could login and watch how the main get
-request is made and you can copy it as cURL and replace the simple curl in the
-script)
+Save it and run it in a loop with an argument such as
+`https://wallhaven.cc/search?categories=111&purity=110&resolutions=1920x1080&sorting=random&order=desc&colors=000000`
+that is a link to some wallpapers. Wallhaven has the option of random and you
+can refresh to get new wallpapers. (For a bigger variety of pictures you could
+login and watch how the main get request is made and you can copy it as cURL
+and replace the simple curl in the script). Run it in a loop like:
+```
+while true; do <script_name> [url]; done
+```
 
 I saved my images under `./images` and you can use python to run
 `fast_label.py` in order to place labels fast on the images. You will need the
