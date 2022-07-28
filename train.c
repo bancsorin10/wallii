@@ -161,7 +161,8 @@ static void train(
     ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
     sample_in->filename = input_files->files[0];
     start_learn_rate = CORR_COEFF;
-    learn_rate_decay = 1e-6;
+    /* learn_rate_decay = 1e-6; */
+    learn_rate_decay = 0;
     for (epochs = 0; epochs < NR_EPOCHS; ++epochs)
     {
         curr_learn_rate = start_learn_rate / (1/(1+learn_rate_decay*epochs));

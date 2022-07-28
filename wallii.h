@@ -20,7 +20,7 @@
 # define NR_CLASSES 2
 # define BATCH_SIZE 8
 # define NR_EPOCHS 100
-# define CORR_COEFF 0.001
+# define CORR_COEFF 0.0001
 # define CLIP_COEFF 1e-7
 
 // expect the image to be saved as arrays for length `size` corresponding to
