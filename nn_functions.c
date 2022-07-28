@@ -62,10 +62,10 @@ void loss_function(double *output, char *filename, t_correction *cor)
         ++i;
     }
 
-    if (output[class] > (1-1e-7))
-        out_clip = 1-1e-7;
-    else if (output[class] < 1e-7)
-        out_clip = 1e-7;
+    if (output[class] > (1-CLIP_COEFF))
+        out_clip = 1-CLIP_COEFF;
+    else if (output[class] < CLIP_COEFF)
+        out_clip = CLIP_COEFF;
     else
         out_clip = output[class];
 

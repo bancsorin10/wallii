@@ -34,33 +34,30 @@ t_inputs *construct_inputs()
     return input_files;
 }
 
-t_correction **construct_correction(t_sample_input *sample)
+t_correction *construct_correction(t_sample_input *sample)
 {
     unsigned int i;
-    unsigned int j;
-    t_correction **cor;
+    t_correction *cor;
 
-    cor = (t_correction **)malloc(sizeof(t_correction *)*BATCH_SIZE);
-    for (i = 0; i < BATCH_SIZE; ++i)
+    cor = (t_correction *)malloc(sizeof(t_correction));
+    cor = (t_correction *)malloc(sizeof(t_correction));
+    cor->dbiases1 = (double *)malloc(sizeof(double)*NR_WEIGHTS);
+    cor->dbiases2 = (double *)malloc(sizeof(double)*NR_CLASSES);
+    bzero(cor->dbiases1, sizeof(double)*NR_WEIGHTS);
+    bzero(cor->dbiases2, sizeof(double)*NR_CLASSES);
+    cor->dweights1 = (double **)malloc(sizeof(double *)*NR_WEIGHTS);
+    cor->dweights2 = (double **)malloc(sizeof(double *)*NR_CLASSES);
+    for (i = 0; i < NR_WEIGHTS; ++i)
     {
-        cor[i] = (t_correction *)malloc(sizeof(t_correction));
-        cor[i]->dbiases1 = (double *)malloc(sizeof(double)*NR_WEIGHTS);
-        cor[i]->dbiases2 = (double *)malloc(sizeof(double)*NR_CLASSES);
-        bzero(cor[i]->dbiases1, sizeof(double)*NR_WEIGHTS);
-        bzero(cor[i]->dbiases2, sizeof(double)*NR_CLASSES);
-        cor[i]->dweights1 = (double **)malloc(sizeof(double *)*NR_WEIGHTS);
-        cor[i]->dweights2 = (double **)malloc(sizeof(double *)*NR_CLASSES);
-        for (j = 0; j < NR_WEIGHTS; ++j)
-        {
-            cor[i]->dweights1[j] = (double *)malloc(sizeof(double)*sample->layer1->input_size);
-            bzero(cor[i]->dweights1[j], sizeof(double)*sample->layer1->input_size);
-        }
-        for (j = 0; j < NR_CLASSES; ++j)
-        {
-            cor[i]->dweights2[j] = (double *)malloc(sizeof(double)*sample->layer2->input_size);
-            bzero(cor[i]->dweights2[j], sizeof(double)*sample->layer2->input_size);
-        }
+        cor->dweights1[i] = (double *)malloc(sizeof(double)*sample->layer1->input_size);
+        bzero(cor->dweights1[i], sizeof(double)*sample->layer1->input_size);
     }
+    for (i = 0; i < NR_CLASSES; ++i)
+    {
+        cor->dweights2[i] = (double *)malloc(sizeof(double)*sample->layer2->input_size);
+        bzero(cor->dweights2[i], sizeof(double)*sample->layer2->input_size);
+    }
+
     return cor;
 }
 
