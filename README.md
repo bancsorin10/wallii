@@ -64,7 +64,7 @@ bulk since the script will append `_god` or `_bad` to the end of the name and
 mess the file extension)
 
 The image size is hardcoded in the C program to 3888 which is 48x27 resolution.
-I have saved this images inside `./inputs`. You can convert your wallpapers
+I have saved these images inside `./inputs`. You can convert your wallpapers
 with the imagemagick utilities as such:
 ```
 cd images && for file in $(ls -1); do convert -resize 48x27 $file ../inputs/$file.rgb; done

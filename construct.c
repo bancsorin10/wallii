@@ -48,12 +48,14 @@ t_correction *construct_correction(t_sample_input *sample)
     cor->dweights2 = (double **)malloc(sizeof(double *)*NR_CLASSES);
     for (i = 0; i < NR_WEIGHTS; ++i)
     {
-        cor->dweights1[i] = (double *)malloc(sizeof(double)*sample->layer1->input_size);
+        cor->dweights1[i] =
+            (double *)malloc(sizeof(double)*sample->layer1->input_size);
         bzero(cor->dweights1[i], sizeof(double)*sample->layer1->input_size);
     }
     for (i = 0; i < NR_CLASSES; ++i)
     {
-        cor->dweights2[i] = (double *)malloc(sizeof(double)*sample->layer2->input_size);
+        cor->dweights2[i] =
+            (double *)malloc(sizeof(double)*sample->layer2->input_size);
         bzero(cor->dweights2[i], sizeof(double)*sample->layer2->input_size);
     }
 
@@ -92,7 +94,8 @@ t_sample_input *construct_initial()
 
     layer2->weights = (double **)malloc(sizeof(double *)*NR_CLASSES);
     for (i = 0; i < NR_CLASSES; ++i) {
-        layer2->weights[i] = (double *)malloc(sizeof(double)*layer2->input_size);
+        layer2->weights[i] =
+            (double *)malloc(sizeof(double)*layer2->input_size);
         for (j = 0; j < layer2->input_size; ++j) {
             layer2->weights[i][j] = random_normal() * 0.01; // small weights
         }

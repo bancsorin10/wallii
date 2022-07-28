@@ -36,7 +36,11 @@ static double *add_layer(
 
     for (i = 0; i < layer->nr_weights; ++i)
     {
-        output[i] = output_sum(input, layer->weights[i], layer->input_size, layer->biases[i]);
+        output[i] = output_sum(
+                input,
+                layer->weights[i],
+                layer->input_size,
+                layer->biases[i]);
     }
 
     return output;
@@ -93,13 +97,17 @@ static void *sample(void *sample_input)
         in[i] = (double)img->RGB[i];
 
     double *output2_copy;
-    output2_copy = (double *)malloc(sizeof(double)*sample_in->layer2->nr_weights);
+    output2_copy =
+        (double *)malloc(sizeof(double)*sample_in->layer2->nr_weights);
 
     // forward propagation
     output1 = add_layer(in, sample_in->layer1);
     relu_activate(output1, sample_in->layer1->nr_weights);
     output2 = add_layer(output1, sample_in->layer2);
-    output2_copy = memcpy(output2_copy, output2, sizeof(double)*sample_in->layer2->nr_weights);
+    output2_copy = memcpy(
+            output2_copy,
+            output2,
+            sizeof(double)*sample_in->layer2->nr_weights);
     softmax_activate(output2, sample_in->layer2->nr_weights);
 
     loss_function(output2, sample_in->filename, cor);
@@ -122,7 +130,8 @@ static void *sample(void *sample_input)
             if (output1[j] == 0)
                 cor->dbiases1[j] = 0;
             else
-                cor->dbiases1[j] += output2_copy[i]*sample_in->layer2->weights[i][j];
+                cor->dbiases1[j] +=
+                    output2_copy[i]*sample_in->layer2->weights[i][j];
         }
     }
     for (i = 0; i < sample_in->layer1->nr_weights; ++i)
@@ -196,7 +205,8 @@ static void train(
         {
             for (j = 0; j < sample_in->layer1->input_size; ++j)
             {
-                sample_in->layer1->weights[i][j] -= CORR_COEFF*cor[0]->dweights1[i][j];
+                sample_in->layer1->weights[i][j] -=
+                    CORR_COEFF*cor[0]->dweights1[i][j];
             }
             sample_in->layer1->biases[i] -= CORR_COEFF*cor[0]->dbiases1[i];
         }
@@ -204,7 +214,8 @@ static void train(
         {
             for (j = 0; j < sample_in->layer2->input_size; ++j)
             {
-                sample_in->layer1->weights[i][j] -= CORR_COEFF*cor[0]->dweights2[i][j];
+                sample_in->layer1->weights[i][j] -=
+                    CORR_COEFF*cor[0]->dweights2[i][j];
             }
             sample_in->layer2->biases[i] -= CORR_COEFF*cor[0]->dbiases2[i];
         }
