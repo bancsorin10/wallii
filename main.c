@@ -36,9 +36,7 @@ static double *add_layer(
 
     for (i = 0; i < layer->nr_weights; ++i)
     {
-        // compute the output
         output[i] = output_sum(input, layer->weights[i], layer->input_size, layer->biases[i]);
-        /* printf("output[%d]: %f -- ", i, output[i]); */
     }
 
     return output;
@@ -88,16 +86,12 @@ static void *sample(void *sample_input)
     sample_in = (t_sample_input *)sample_input;
     cor = construct_correction(sample_in);
 
-    /* pthread_detach(pthread_self()); */
-    /* printf("%.5f\n", sample_in->layer1->weights[0][0]); */
-
     img = decode_image(sample_in->filename);
     in = (double *)malloc(sizeof(double)*IMG_SIZE);
     bzero(in, sizeof(double)*IMG_SIZE);
     for (i = 0; i < IMG_SIZE; ++i)
         in[i] = (double)img->RGB[i];
 
-    /* printf("%.5f\n", in[100]); */
     double *output2_copy;
     output2_copy = (double *)malloc(sizeof(double)*sample_in->layer2->nr_weights);
 
@@ -105,12 +99,10 @@ static void *sample(void *sample_input)
     output1 = add_layer(in, sample_in->layer1);
     relu_activate(output1, sample_in->layer1->nr_weights);
     output2 = add_layer(output1, sample_in->layer2);
-    // should make a copy of this output2 ^^ for the backward propagation
     output2_copy = memcpy(output2_copy, output2, sizeof(double)*sample_in->layer2->nr_weights);
     softmax_activate(output2, sample_in->layer2->nr_weights);
 
     loss_function(output2, sample_in->filename, cor);
-    /* printf("thread id: %10d | output1: %10.5f | output2: %10.5f\n", sample_in->thread_id, output2[0], output2[1]); */
 
     // backward propagation
     output2_copy[cor->class] -= 1;
@@ -150,7 +142,6 @@ static void *sample(void *sample_input)
     free(output2_copy);
 
     return (void *)cor;
-    /* pthread_exit(NULL); */
 }
 
 static void train(
@@ -166,19 +157,11 @@ static void train(
     double avg_acc;
     double avg_epoch_loss;
     double avg_epoch_acc;
-    /* void *tmp; */
     pthread_t *ptid;
 
     
     ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
     sample_in->filename = input_files->files[0];
-    // for epochs
-    // for 0-BATCH_SIZE start threads
-    // average loss over the threads when collecting
-    // update the weights
-    /* for (i = 0; i < input_files->nr_files; ++i) { */
-        /* printf("%s\n", input_files->files[i]); */
-    /* } */
     for (epochs = 0; epochs < NR_EPOCHS; ++epochs)
     {
         avg_epoch_loss = 0;
@@ -193,7 +176,6 @@ static void train(
         for (i = 0; i < BATCH_SIZE; ++i)
         {
             pthread_join(ptid[i], &cor[i]);
-            /* cor[i] = (t_correction *)tmp; */
         }
 
         // average loss over the threads
@@ -203,7 +185,6 @@ static void train(
         {
             avg_loss += cor[i]->loss;
             avg_acc  += cor[i]->acc;
-            /* printf("thread %5d :: loss %5.5f :: acc %5.5f\n", i, cor[i]->loss, cor[i]->acc); */
         }
         avg_loss /= BATCH_SIZE;
         avg_acc /= BATCH_SIZE;

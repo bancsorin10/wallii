@@ -22,7 +22,6 @@ t_inputs *construct_inputs()
     {
         strcpy(prefix, "inputs/");
         input_files->files[i-2] = strdup(strcat(prefix, namelist[i]->d_name));
-        /* printf("%s\n", input_files->files[i-2]); */
         ++i;
     }
 
