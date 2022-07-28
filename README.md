@@ -78,13 +78,18 @@ After you have the input images you can do:
 ```
 make
 
-./a.out
+./train
 ```
 in order to run the program.
+
+You can check the model after you trained against other pics like
+```
+./model <new_image_never_seen>
+```
 
 ## current status
 
 + no optimization for how the weights are modified
 + no pruning
-+ no validation program (this program only covers the training)
-+ trained model is not saved yet :p
++ validation logs do not exist it was just tested it can be run on other images
+after training

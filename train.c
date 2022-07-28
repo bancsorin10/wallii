@@ -1,50 +1,5 @@
 #include "wallii.h"
 
-// compute the sum of elementwise multiplication of the inputs and the weights
-// + the bias
-static double output_sum(
-        double *input,
-        double *weight,
-        unsigned int size,
-        double bias)
-{
-
-    unsigned int i;
-    double out;
-
-    out = bias;
-    for (i = 0; i < size; ++i)
-    {
-        out += input[i]*weight[i];
-    }
-
-    return out;
-}
-
-// compute a new layer
-// should probably return a structure of the used weights and the results of
-// `output_sum` for each input with each weight
-static double *add_layer(
-        double *input,
-        t_layer *layer)
-{
-    unsigned int i;
-    double *output;
-
-    output = (double *)malloc(sizeof(double)*layer->nr_weights);
-    bzero(output, sizeof(double)*layer->nr_weights);
-
-    for (i = 0; i < layer->nr_weights; ++i)
-    {
-        output[i] = output_sum(
-                input,
-                layer->weights[i],
-                layer->input_size,
-                layer->biases[i]);
-    }
-
-    return output;
-}
 
 static void free_layer(t_layer *layer)
 {
@@ -76,6 +31,37 @@ static void free_correction(t_correction *cor)
     free(cor);
 }
 
+// save the model in a binary file under the following structure
+// input_size1: unsigned int
+// nr_weights1: unsigned int
+// biases1: double [nr_weighst1]
+// weights1: double [nr_weights1][input_size1]
+// input_size2: unsigned int
+// nr_weights2: unsigned int
+// biases2: double [nr_weighst2]
+// weights2: double [nr_weights2][input_size2]
+static void save_model(t_sample_input *sample_in)
+{
+    int fd;
+    unsigned int i;
+
+    fd = open("wallii.model", O_CREAT|O_RDWR);
+    write(fd, &sample_in->layer1->input_size, sizeof(unsigned int));
+    write(fd, &sample_in->layer1->nr_weights, sizeof(unsigned int));
+    write(fd, sample_in->layer1->biases, sizeof(double)*sample_in->layer1->nr_weights);
+    for (i = 0; i < sample_in->layer1->nr_weights; ++i)
+    {
+        write(fd, sample_in->layer1->weights[i], sizeof(double)*sample_in->layer1->input_size);
+    }
+    write(fd, &sample_in->layer2->input_size, sizeof(unsigned int));
+    write(fd, &sample_in->layer2->nr_weights, sizeof(unsigned int));
+    write(fd, sample_in->layer2->biases, sizeof(double)*sample_in->layer2->nr_weights);
+    for (i = 0; i < sample_in->layer2->nr_weights; ++i)
+    {
+        write(fd, sample_in->layer2->weights[i], sizeof(double)*sample_in->layer2->input_size);
+    }
+    close(fd);
+}
 
 static void *sample(void *sample_input)
 {
@@ -230,6 +216,9 @@ static void train(
     avg_epoch_acc /= (input_files->nr_files/BATCH_SIZE);
     printf("epoch: %5d || avg loss: %5.5f || avg acc: %5.5f\n", epochs, avg_epoch_loss, avg_epoch_acc);
     }
+
+    save_model(sample_in);
+
     free(ptid);
 }
 

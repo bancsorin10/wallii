@@ -70,5 +70,6 @@ void relu_activate(double *output, unsigned int size);
 t_inputs *construct_inputs();
 t_correction *construct_correction(t_sample_input *sample);
 t_sample_input *construct_initial();
+double *add_layer( double *input, t_layer *layer);
 
 #endif

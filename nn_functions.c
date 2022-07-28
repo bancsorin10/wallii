@@ -1,5 +1,49 @@
 #include "wallii.h"
 
+// compute the sum of elementwise multiplication of the inputs and the weights
+// + the bias
+static double output_sum(
+        double *input,
+        double *weight,
+        unsigned int size,
+        double bias)
+{
+
+    unsigned int i;
+    double out;
+
+    out = bias;
+    for (i = 0; i < size; ++i)
+    {
+        out += input[i]*weight[i];
+    }
+
+    return out;
+}
+
+// compute a new layer
+// should probably return a structure of the used weights and the results of
+// `output_sum` for each input with each weight
+double *add_layer( double *input, t_layer *layer)
+{
+    unsigned int i;
+    double *output;
+
+    output = (double *)malloc(sizeof(double)*layer->nr_weights);
+    bzero(output, sizeof(double)*layer->nr_weights);
+
+    for (i = 0; i < layer->nr_weights; ++i)
+    {
+        output[i] = output_sum(
+                input,
+                layer->weights[i],
+                layer->input_size,
+                layer->biases[i]);
+    }
+
+    return output;
+}
+
 // relu activation function
 void relu_activate(double *output, unsigned int size)
 {
