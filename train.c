@@ -152,13 +152,19 @@ static void train(
     double avg_acc;
     double avg_epoch_loss;
     double avg_epoch_acc;
+    double start_learn_rate;
+    double curr_learn_rate;
+    double learn_rate_decay;
     pthread_t *ptid;
 
     
     ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
     sample_in->filename = input_files->files[0];
+    start_learn_rate = CORR_COEFF;
+    learn_rate_decay = 1e-6;
     for (epochs = 0; epochs < NR_EPOCHS; ++epochs)
     {
+        curr_learn_rate = start_learn_rate / (1/(1+learn_rate_decay*epochs));
         avg_epoch_loss = 0;
         avg_epoch_acc  = 0;
     for (k = 0; k+BATCH_SIZE-1 < input_files->nr_files; k += BATCH_SIZE)
@@ -192,18 +198,18 @@ static void train(
             for (j = 0; j < sample_in->layer1->input_size; ++j)
             {
                 sample_in->layer1->weights[i][j] -=
-                    CORR_COEFF*cor[0]->dweights1[i][j];
+                    curr_learn_rate*cor[0]->dweights1[i][j];
             }
-            sample_in->layer1->biases[i] -= CORR_COEFF*cor[0]->dbiases1[i];
+            sample_in->layer1->biases[i] -= curr_learn_rate*cor[0]->dbiases1[i];
         }
         for (i = 0; i < sample_in->layer2->nr_weights; ++i)
         {
             for (j = 0; j < sample_in->layer2->input_size; ++j)
             {
                 sample_in->layer1->weights[i][j] -=
-                    CORR_COEFF*cor[0]->dweights2[i][j];
+                    curr_learn_rate*cor[0]->dweights2[i][j];
             }
-            sample_in->layer2->biases[i] -= CORR_COEFF*cor[0]->dbiases2[i];
+            sample_in->layer2->biases[i] -= curr_learn_rate*cor[0]->dbiases2[i];
         }
 
         // free correction
