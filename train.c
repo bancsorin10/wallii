@@ -14,23 +14,6 @@ static void free_layer(t_layer *layer)
     free(layer);
 }
 
-static void free_correction(t_correction *cor)
-{
-    unsigned int i;
-
-    for (i = 0; i < NR_WEIGHTS; ++i)
-    {
-        free(cor->dweights1[i]);
-    }
-    for (i = 0; i < NR_CLASSES; ++i)
-    {
-        free(cor->dweights2[i]);
-    }
-    free(cor->dbiases1);
-    free(cor->dbiases2);
-    free(cor);
-}
-
 // save the model in a binary file under the following structure
 // input_size1: unsigned int
 // nr_weights1: unsigned int
@@ -63,6 +46,54 @@ static void save_model(t_sample_input *sample_in)
     close(fd);
 }
 
+static void avg_correction(t_correction **cor, t_correction *avg_cor, t_sample_input *sample)
+{
+    unsigned int s;
+    unsigned int i;
+    unsigned int j;
+
+    double weights_sum;
+    double bias_sum;
+    for (i = 0; i < sample->layer1->nr_weights; ++i)
+    {
+        for (j = 0; j < sample->layer1->input_size; ++j)
+        {
+            weights_sum = 0;
+            for (s = 0; s < BATCH_SIZE; ++s)
+            {
+                weights_sum += cor[s]->dweights1[i][j];
+            }
+            avg_cor->dweights1[i][j] = weights_sum/BATCH_SIZE;
+        }
+
+        bias_sum = 0;
+        for (s = 0; s < BATCH_SIZE; ++s)
+        {
+            bias_sum += cor[s]->dbiases1[i];
+        }
+        avg_cor->dbiases1[i] = bias_sum/BATCH_SIZE;
+    }
+    for (i = 0; i < sample->layer2->nr_weights; ++i)
+    {
+        for (j = 0; j < sample->layer2->input_size; ++j)
+        {
+            weights_sum = 0;
+            for (s = 0; s < BATCH_SIZE; ++s)
+            {
+                weights_sum += cor[s]->dweights2[i][j];
+            }
+            avg_cor->dweights2[i][j] = weights_sum/BATCH_SIZE;
+        }
+
+        bias_sum = 0;
+        for (s = 0; s < BATCH_SIZE; ++s)
+        {
+            bias_sum += cor[s]->dbiases2[i];
+        }
+        avg_cor->dbiases2[i] = bias_sum/BATCH_SIZE;
+    }
+}
+
 static void *sample(void *sample_input)
 {
     t_image *img;
@@ -74,8 +105,8 @@ static void *sample(void *sample_input)
     t_sample_input *sample_in;
     t_correction *cor;
     sample_in = (t_sample_input *)sample_input;
+    
     cor = construct_correction(sample_in);
-
     img = decode_image(sample_in->filename);
     in = (double *)malloc(sizeof(double)*IMG_SIZE);
     bzero(in, sizeof(double)*IMG_SIZE);
@@ -147,6 +178,7 @@ static void train(
     unsigned int i;
     unsigned int j;
     unsigned int k;
+    unsigned int s;
     unsigned int epochs;
     double avg_loss;
     double avg_acc;
@@ -156,8 +188,12 @@ static void train(
     double curr_learn_rate;
     double learn_rate_decay;
     pthread_t *ptid;
+    t_correction *avg_cor;
+    t_sample_input *momentum;
 
     
+    avg_cor = construct_correction(sample_in);
+    momentum = construct_momentum(sample_in);
     ptid = (pthread_t *)malloc(sizeof(pthread_t)*BATCH_SIZE);
     sample_in->filename = input_files->files[0];
     start_learn_rate = CORR_COEFF;
@@ -193,24 +229,40 @@ static void train(
         avg_epoch_loss += avg_loss;
         avg_epoch_acc += avg_acc;
 
+        /*
+         * The correction should be used from all the images, below only the
+         * correction from the cor[0] is used, this should be averaged and a
+         * momentum used in order to have better training.
+         */
+        avg_correction(cor, avg_cor, sample_in);
+        /* for (s = 0; s < BATCH_SIZE; ++s) */
+        /* { */
+            /* for (i = 0; i < sample_in->layer1->nr_weights; ++i) */
+            /* { */
+                /* for (j = 0; j < sample_in->layer1->input_size; ++j) */
+                /* { */
+                /* } */
+            /* } */
+        /* } */
+
         // update weights
         for (i = 0; i < sample_in->layer1->nr_weights; ++i)
         {
             for (j = 0; j < sample_in->layer1->input_size; ++j)
             {
                 sample_in->layer1->weights[i][j] -=
-                    curr_learn_rate*cor[0]->dweights1[i][j];
+                    curr_learn_rate*avg_cor->dweights1[i][j];
             }
-            sample_in->layer1->biases[i] -= curr_learn_rate*cor[0]->dbiases1[i];
+            sample_in->layer1->biases[i] -= curr_learn_rate*avg_cor->dbiases1[i];
         }
         for (i = 0; i < sample_in->layer2->nr_weights; ++i)
         {
             for (j = 0; j < sample_in->layer2->input_size; ++j)
             {
                 sample_in->layer1->weights[i][j] -=
-                    curr_learn_rate*cor[0]->dweights2[i][j];
+                    curr_learn_rate*avg_cor->dweights2[i][j];
             }
-            sample_in->layer2->biases[i] -= curr_learn_rate*cor[0]->dbiases2[i];
+            sample_in->layer2->biases[i] -= curr_learn_rate*avg_cor->dbiases2[i];
         }
 
         // free correction
@@ -225,6 +277,10 @@ static void train(
     }
 
     save_model(sample_in);
+
+    free_correction(avg_cor);
+    free_sample_input(sample_in);
+    free_sample_input(momentum);
 
     free(ptid);
 }

@@ -71,5 +71,8 @@ t_inputs *construct_inputs();
 t_correction *construct_correction(t_sample_input *sample);
 t_sample_input *construct_initial();
 double *add_layer( double *input, t_layer *layer);
+t_sample_input *construct_momentum(t_sample_input *sample);
+void free_correction(t_correction *cor);
+void free_sample_input(t_sample_input *sample);
 
 #endif

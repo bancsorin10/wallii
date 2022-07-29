@@ -107,3 +107,81 @@ t_sample_input *construct_initial()
 
     return sample_in;
 }
+
+t_sample_input *construct_momentum(t_sample_input *sample)
+{
+    unsigned int i;
+    t_sample_input *momentum;
+
+    momentum = (t_sample_input *)malloc(sizeof(t_sample_input));
+    momentum->layer1 = (t_layer *)malloc(sizeof(t_layer));
+    momentum->layer2 = (t_layer *)malloc(sizeof(t_layer));
+    momentum->layer1->nr_weights = sample->layer1->nr_weights;
+    momentum->layer2->nr_weights = sample->layer2->nr_weights;
+    momentum->layer1->input_size = sample->layer1->input_size;
+    momentum->layer2->input_size = sample->layer2->input_size;
+    momentum->layer1->weights = (double **)malloc(sizeof(double *)*momentum->layer1->nr_weights);
+    momentum->layer2->weights = (double **)malloc(sizeof(double *)*momentum->layer2->nr_weights);
+    for (i = 0; i < momentum->layer1->nr_weights; ++i)
+    {
+        momentum->layer1->weights[i] = (double *)malloc(sizeof(double)*momentum->layer1->input_size);
+        bzero(momentum->layer1->weights[i], sizeof(double)*momentum->layer1->input_size);
+    }
+    for (i = 0; i < momentum->layer2->nr_weights; ++i)
+    {
+        momentum->layer2->weights[i] = (double *)malloc(sizeof(double)*momentum->layer2->input_size);
+        bzero(momentum->layer2->weights[i], sizeof(double)*momentum->layer2->input_size);
+    }
+    momentum->layer1->biases = (double *)malloc(sizeof(double)*momentum->layer1->nr_weights);
+    momentum->layer2->biases = (double *)malloc(sizeof(double)*momentum->layer2->nr_weights);
+    bzero(momentum->layer1->biases, sizeof(double)*momentum->layer1->nr_weights);
+    bzero(momentum->layer2->biases, sizeof(double)*momentum->layer2->nr_weights);
+    momentum->filename = NULL;
+
+    return momentum;
+}
+
+// free stuff down VVV
+
+void free_correction(t_correction *cor)
+{
+    unsigned int i;
+
+    for (i = 0; i < NR_WEIGHTS; ++i)
+    {
+        free(cor->dweights1[i]);
+    }
+    for (i = 0; i < NR_CLASSES; ++i)
+    {
+        free(cor->dweights2[i]);
+    }
+    free(cor->dbiases1);
+    free(cor->dbiases2);
+    free(cor);
+}
+
+void free_sample_input(t_sample_input *sample)
+{
+    unsigned int i;
+    
+    // free layer1
+    for (i = 0; i < sample->layer1->nr_weights; ++i)
+    {
+        free(sample->layer1->weights[i]);
+    }
+    free(sample->layer1->biases);
+    free(sample->layer1);
+
+    // free layer2
+    for (i = 0; i < sample->layer2->nr_weights; ++i)
+    {
+        free(sample->layer2->weights[i]);
+    }
+    free(sample->layer2->biases);
+    free(sample->layer2);
+
+    if (sample->filename)
+        free(sample->filename);
+
+    free(sample);
+}
