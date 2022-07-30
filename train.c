@@ -229,40 +229,41 @@ static void train(
         avg_epoch_loss += avg_loss;
         avg_epoch_acc += avg_acc;
 
-        /*
-         * The correction should be used from all the images, below only the
-         * correction from the cor[0] is used, this should be averaged and a
-         * momentum used in order to have better training.
-         */
         avg_correction(cor, avg_cor, sample_in);
-        /* for (s = 0; s < BATCH_SIZE; ++s) */
-        /* { */
-            /* for (i = 0; i < sample_in->layer1->nr_weights; ++i) */
-            /* { */
-                /* for (j = 0; j < sample_in->layer1->input_size; ++j) */
-                /* { */
-                /* } */
-            /* } */
-        /* } */
-
         // update weights
         for (i = 0; i < sample_in->layer1->nr_weights; ++i)
         {
             for (j = 0; j < sample_in->layer1->input_size; ++j)
             {
-                sample_in->layer1->weights[i][j] -=
-                    curr_learn_rate*avg_cor->dweights1[i][j];
+                /* momentum->layer1->weights[i][j] = */
+                    /* momentum->layer1->weights[i][j] */
+                    /* - curr_learn_rate*avg_cor->dweights1[i][j]; */
+                /* sample_in->layer1->weights[i][j] += */
+                    /* momentum->layer1->weights[i][j]; */
+                sample_in->layer1->weights[i][j] +=
+                    - curr_learn_rate*avg_cor->dweights1[i][j];
             }
-            sample_in->layer1->biases[i] -= curr_learn_rate*avg_cor->dbiases1[i];
+            /* momentum->layer1->biases[i] = momentum->layer1->biases[i] */
+                /* - curr_learn_rate*avg_cor->dbiases1[i]; */
+            /* sample_in->layer1->biases[i] += momentum->layer1->biases[i]; */
+            sample_in->layer1->biases[i] += -curr_learn_rate*avg_cor->dbiases1[i];
         }
         for (i = 0; i < sample_in->layer2->nr_weights; ++i)
         {
             for (j = 0; j < sample_in->layer2->input_size; ++j)
             {
-                sample_in->layer1->weights[i][j] -=
-                    curr_learn_rate*avg_cor->dweights2[i][j];
+                /* momentum->layer2->weights[i][j] = */
+                    /* momentum->layer2->weights[i][j] */
+                    /* - curr_learn_rate*avg_cor->dweights2[i][j]; */
+                /* sample_in->layer1->weights[i][j] += */
+                    /* momentum->layer2->weights[i][j]; */
+                sample_in->layer2->weights[i][j] +=
+                    - curr_learn_rate*avg_cor->dweights2[i][j];
             }
-            sample_in->layer2->biases[i] -= curr_learn_rate*avg_cor->dbiases2[i];
+            /* momentum->layer2->biases[i] = momentum->layer2->biases[i] - */
+                /* curr_learn_rate*avg_cor->dbiases2[i]; */
+            /* sample_in->layer2->biases[i] += momentum->layer2->biases[i]; */
+            sample_in->layer2->biases[i] += -curr_learn_rate*avg_cor->dbiases2[i];
         }
 
         // free correction
@@ -298,8 +299,6 @@ int main()
     train(sample_in, cor, input_files);
 
     // free memory
-    free_layer(sample_in->layer1);
-    free_layer(sample_in->layer2);
     for (i = 0; i < input_files->nr_files; ++i)
     {
         free(input_files->files[i]);
@@ -307,7 +306,6 @@ int main()
     free(input_files->files);
     free(input_files);
     free(cor);
-    free(sample_in);
 
     return 0;
 }
